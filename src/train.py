@@ -15,7 +15,7 @@ import os
 import warnings
 import torch
 from src.utils import utils
-from pytorch_lightning import loggers
+from pytorch_lightning.loggers import LightningLoggerBase
 import pickle
 
 os.environ['NUMEXPR_MAX_THREADS'] = '16'
@@ -98,7 +98,7 @@ def train(cfg: DictConfig) -> Optional[float]:
             callbacks[0].FILE_EXTENSION = f'_fold-{fold+1}.ckpt' # naming of logs for cross validation callbacks[0] is the model checkpoint callback (this is a hacky way to do this)
 
         # Init lightning loggers
-        logger: List[loggers] = []
+        logger: List[LightningLoggerBase] = []
         if "logger" in cfg:
             for _, lg_conf in cfg.logger.items():
                 if "_target_" in lg_conf:
