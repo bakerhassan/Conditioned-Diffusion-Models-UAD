@@ -26,7 +26,7 @@ warnings.filterwarnings(
 
 log = utils.get_logger(__name__) # init logger
 
-@hydra.main(config_path='configs', config_name='config') # Hydra decorator
+@hydra.main(config_path='configs', config_name='config', version_base='1.3.2') # Hydra decorator
 def train(cfg: DictConfig) -> Optional[float]: 
     results = {}
 
@@ -68,7 +68,6 @@ def train(cfg: DictConfig) -> Optional[float]:
         
         log.info(f"Training Fold {fold+1} of {end_fold} in the WandB group {cfg.logger.wandb.group}")
         prefix = f'{fold+1}/' # naming of logs
-
 
         cfg.datamodule._target_ = f'src.datamodules.Datamodules_train.{cfg.datamodule.cfg.name}' # set datamodule target
         log.info(f"Instantiating datamodule <{cfg.datamodule._target_}>") 
