@@ -6,7 +6,7 @@ from pytorch_lightning import (
     seed_everything,
 )
 from omegaconf import DictConfig, OmegaConf, open_dict
-from pytorch_lightning.plugins import DDPPlugin
+from pytorch_lightning.strategies import DDPStrategy
 import hydra
 from omegaconf import DictConfig
 from typing import List, Optional
@@ -49,7 +49,7 @@ def train(cfg: DictConfig) -> Optional[float]:
 
     # Set plugins for lightning trainer
     if cfg.trainer.get('accelerator',None) == 'ddp': # for better performance in ddp mode
-        plugs = DDPPlugin(find_unused_parameters=False)
+        plugs = DDPStrategy(find_unused_parameters=False)
     else: 
         plugs = None
 
