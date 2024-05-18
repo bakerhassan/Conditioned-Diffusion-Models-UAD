@@ -6,6 +6,7 @@ cfg:
     pathBase: ${data_dir}
 
     IXI:
+      path: /lustre/cniel/data/stripped
       IDs: 
         train: 
           - ${data_dir}/Data/splits/IXI_train_fold0.csv
@@ -23,11 +24,13 @@ cfg:
       keep_t2: ${data_dir}/Data/splits/avail_t2.csv
 
     Brats21:
+      path:
       IDs: 
         test: ${data_dir}/Data/splits/Brats21_test.csv
         val: ${data_dir}/Data/splits/Brats21_val.csv
 
     MSLUB:
+      path: /lustre/cniel/BraTS2021_Training_Data/heldout
       IDs: 
         test: ${data_dir}/Data/splits/MSLUB_test.csv
         val: ${data_dir}/Data/splits/MSLUB_val.csv

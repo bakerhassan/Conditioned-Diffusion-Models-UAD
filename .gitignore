@@ -16,3 +16,4 @@ wandb/
 # pc_environment.env
 outputlog*
 errorlog*
+.idea
