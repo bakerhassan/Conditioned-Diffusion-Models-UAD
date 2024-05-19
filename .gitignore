@@ -18,6 +18,6 @@ outputlog*
 errorlog*
 .idea
 *.log
-*pyc
+*.pyc
 .checkpoints/*
-__pycache__/
+**/__pycache__/
