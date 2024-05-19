@@ -7,6 +7,7 @@ cfg:
   rescaleFactor: ${datamodule.cfg.rescaleFactor}
   interRes: ${datamodule.cfg.interRes}
   cropMode: ${datamodule.cfg.cropMode}
+  image_new_size: ${datamodule.cfg.image_new_size}
   spatialDims: 2D
   resizedEvaluation: ${datamodule.cfg.resizedEvaluation}
 

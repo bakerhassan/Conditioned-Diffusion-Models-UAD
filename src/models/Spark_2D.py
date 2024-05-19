@@ -3,7 +3,7 @@ from src.models.losses import L1_AE
 import torch
 from src.utils.utils_eval import _test_step, _test_end, get_eval_dictionary
 import numpy as np
-from pytorch_lightning.core.lightning import LightningModule
+from pytorch_lightning import LightningModule
 import torch.optim as optim
 from typing import Any
 import torchio as tio
@@ -63,6 +63,7 @@ class Spark_2D(LightningModule):
         ID = batch['ID']
         self.stage = batch['stage']
         label = batch['label']
+        original_shape = batch['original_shape']
         AnomalyScoreReco = []
 
 
@@ -109,7 +110,7 @@ class Spark_2D(LightningModule):
         final_volume = final_volume.unsqueeze(0)
         
         # calculate metrics
-        _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label) # everything that is independent of the model choice
+        _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label,original_shape) # everything that is independent of the model choice
 
            
     def on_test_end(self) :

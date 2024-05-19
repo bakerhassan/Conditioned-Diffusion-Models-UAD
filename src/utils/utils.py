@@ -142,7 +142,7 @@ def log_hyperparameters(
     hparams["model/params_not_trainable"] = sum(
         p.numel() for p in model.parameters() if not p.requires_grad
     )
-    hparams['run_id'] = trainer.logger.experiment[0].id
+    # hparams['run_id'] = trainer.logger.experiment[0].id
     # send hparams to all loggers
     trainer.logger.log_hyperparams(hparams)
 

@@ -3,6 +3,7 @@ from pytorch_lightning import LightningDataModule
 from typing import Optional
 import pandas as pd
 import src.datamodules.create_dataset as create_dataset
+import torchio as tio
 
 
 class Brats21(LightningDataModule):
@@ -18,25 +19,25 @@ class Brats21(LightningDataModule):
         self.csv = {}
         states = ['val', 'test']
 
-        self.csv['val'] = pd.read_csv(self.csvpath_val)
-        self.csv['test'] = pd.read_csv(self.csvpath_test)
-        for state in states:
-            self.csv[state]['settype'] = state
-            self.csv[state]['setname'] = 'Brats21'
+        # self.csv['val'] = pd.read_csv(self.csvpath_val)
+        # self.csv['test'] = pd.read_csv(self.csvpath_test)
+        # for state in states:
+        #     self.csv[state]['settype'] = state
+        #     self.csv[state]['setname'] = 'Brats21'
 
-            self.csv[state]['img_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['img_path']
-            self.csv[state]['mask_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['mask_path']
-            self.csv[state]['seg_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['seg_path']
+        #     self.csv[state]['img_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['img_path']
+        #     self.csv[state]['mask_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['mask_path']
+        #     self.csv[state]['seg_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['seg_path']
 
-            if cfg.mode != 't1':
-                self.csv[state]['img_path'] = self.csv[state]['img_path'].str.replace('t1', cfg.mode).str.replace(
-                    'FLAIR.nii.gz', f'{cfg.mode.lower()}.nii.gz')
+        #     if cfg.mode != 't1':
+        #         self.csv[state]['img_path'] = self.csv[state]['img_path'].str.replace('t1', cfg.mode).str.replace(
+        #             'FLAIR.nii.gz', f'{cfg.mode.lower()}.nii.gz')
 
     def setup(self, stage: Optional[str] = None):
 
         # called on every GPU
         if not hasattr(self, 'val_eval'):
-            mriprocessor = create_dataset.MRIProcessor(self.cfg.Brats21.path)
+            mriprocessor = create_dataset.MRIProcessor(self.cfg.path.Brats21.path,  self.cfg.image_new_size)
             subjects = mriprocessor.modify_subjects_for_this_project()
             test, val, _ = mriprocessor.split_data(subjects, .95, .05, 0)
             if self.cfg.sample_set:  # for debugging

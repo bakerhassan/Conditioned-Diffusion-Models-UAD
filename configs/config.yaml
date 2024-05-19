@@ -12,8 +12,8 @@ defaults:
     
   - logger: # set logger here or use command line (e.g. `python run.py logger=wandb`)
     - wandb
-    - csv 
-  - experiment: DDPM.yaml # set experiment here or use command line (e.g. `python run.py experiment=DDPM`) 
+    # - csv 
+  - experiment: cDDPM/DDPM_patched.yaml # set experiment here or use command line (e.g. `python run.py experiment=DDPM`) 
   - mode: default.yaml
 
   # enable color logging

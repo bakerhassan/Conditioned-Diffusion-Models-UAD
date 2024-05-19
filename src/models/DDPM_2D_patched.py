@@ -5,12 +5,15 @@ from src.models.modules.OpenAI_Unet import UNetModel as OpenAI_UNet
 import torch
 from src.utils.utils_eval import _test_step, _test_end, get_eval_dictionary
 import numpy as np
-from pytorch_lightning.core.lightning import LightningModule
+from pytorch_lightning import LightningModule
 import torch.optim as optim
 from typing import Any, List
 import torchio as tio
 from src.utils.patch_sampling import BoxSampler
 from src.utils.generate_noise import gen_noise
+from torch.utils.data import DataLoader, TensorDataset
+
+
 class DDPM_2D(LightningModule):
     def __init__(self,cfg,prefix=None):
         super().__init__()
@@ -20,7 +23,7 @@ class DDPM_2D(LightningModule):
         # Model 
 
         model = OpenAI_UNet(
-                            image_size =  (int(cfg.imageDim[0] / cfg.rescaleFactor),int(cfg.imageDim[1] / cfg.rescaleFactor)),
+                            image_size =  cfg.image_new_size[:-1],
                             in_channels = 1,
                             model_channels = cfg.get('unet_dim',64),
                             out_channels = 1,
@@ -51,7 +54,7 @@ class DDPM_2D(LightningModule):
     
         self.diffusion = GaussianDiffusion(
         model,
-        image_size = (int(cfg.imageDim[0] / cfg.rescaleFactor),int(cfg.imageDim[1] / cfg.rescaleFactor)), # only important when sampling
+        image_size = cfg.image_new_size[:-1], # only important when sampling
         timesteps = timesteps,   # number of steps
         sampling_timesteps = sampling_timesteps,
         objective = cfg.get('objective','pred_x0'), # pred_noise or pred_x0
@@ -137,11 +140,12 @@ class DDPM_2D(LightningModule):
             self.threshold = {}
 
     def test_step(self, batch: Any, batch_idx: int):
-        self.dataset = batch['Dataset']
+        self.dataset = batch['id']
         input = batch['vol'][tio.DATA]
         data_orig = batch['vol_orig'][tio.DATA]
-        data_seg = batch['seg_orig'][tio.DATA] if batch['seg_available'] else torch.zeros_like(data_orig)
+        data_seg = batch['seg_orig'][tio.DATA]
         data_mask = batch['mask_orig'][tio.DATA]
+        original_shape = batch['original_shape']
         ID = batch['ID']
         age = batch['age']
         self.stage = batch['stage']
@@ -185,7 +189,17 @@ class DDPM_2D(LightningModule):
         for k in range(bbox.shape[1]):
             box = bbox[:,k]
             # reconstruct
-            loss_diff, reco = self.diffusion(input,t=self.test_timesteps-1, box=box,noise=noise)
+            dataset_ = TensorDataset(input,box,noise)
+            data_loader_ = DataLoader(dataset_, batch_size=100, shuffle=False)
+            loss_diff = []
+            reco = []
+            for batch in data_loader_:
+                batch_input, batch_box, batch_noise = batch
+                loss_diff_, reco_ = self.diffusion(batch_input,t=self.test_timesteps-1, box=batch_box,noise=batch_noise)
+                loss_diff.append(loss_diff_)
+                reco.append(reco_)
+            loss_diff = torch.tensor(loss_diff).mean().item()
+            reco = torch.cat(reco, dim=0)
 
             if reco.shape[1] == 2:
                 reco = reco[:,0:1,:,:]
@@ -216,7 +230,7 @@ class DDPM_2D(LightningModule):
 
         
         
-        AnomalyScoreComb.append(loss_diff.cpu())
+        AnomalyScoreComb.append(loss_diff)
         AnomalyScoreReg.append(AnomalyScoreComb) # dummy
         AnomalyScoreReco.append(AnomalyScoreComb) # dummy
 
@@ -245,7 +259,7 @@ class DDPM_2D(LightningModule):
         final_volume = final_volume.unsqueeze(0)
 
         # calculate metrics
-        _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label) 
+        _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label, original_shape) 
 
            
     def on_test_end(self) :

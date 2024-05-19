@@ -138,8 +138,8 @@ def train(cfg: DictConfig) -> Optional[float]:
         # logging
         log.info(f"Best checkpoint path:\n{trainer.checkpoint_callback.best_model_path}")
         log.info(f"Best checkpoint metric:\n{trainer.checkpoint_callback.best_model_score}")
-        trainer.logger.experiment[0].log({'best_ckpt_path':trainer.checkpoint_callback.best_model_path})
-        trainer.logger.experiment[0].log({'logdir':trainer.log_dir})
+        trainer.logger.experiment.log({'best_ckpt_path':trainer.checkpoint_callback.best_model_path})
+        trainer.logger.experiment.log({'logdir':trainer.log_dir})
 
         # metrics
         validation_metrics = trainer.callback_metrics
@@ -196,7 +196,7 @@ def train(cfg: DictConfig) -> Optional[float]:
                 preds_dict['test'][set] = trainer.lightning_module.eval_dict
                 log_dict.update(utils.summarize(preds_dict['test'][set],'test')) # sets prefix test/ and removes lists for better logging in wandb
                 log_dict = utils.summarize(log_dict,f'{fold+1}/'+set) # sets prefix for each data set
-                trainer.logger.experiment[0].log(log_dict)
+                trainer.logger.experiment.log(log_dict)
 
                 
 

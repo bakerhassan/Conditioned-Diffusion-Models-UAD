@@ -3,7 +3,7 @@ from pytorch_lightning import LightningDataModule
 import src.datamodules.create_dataset as create_dataset
 from typing import Optional
 import pandas as pd
-
+import torchio as tio
 
 class IXI(LightningDataModule):
 
@@ -23,33 +23,33 @@ class IXI(LightningDataModule):
         self.csv = {}
         states = ['train', 'val', 'test']
 
-        self.csv['train'] = pd.read_csv(self.csvpath_train)
-        self.csv['val'] = pd.read_csv(self.csvpath_val)
-        self.csv['test'] = pd.read_csv(self.csvpath_test)
-        if cfg.mode == 't2':
-            keep_t2 = pd.read_csv(cfg.path.IXI.keep_t2)  # only keep t2 images that have a t1 counterpart
+        # self.csv['train'] = pd.read_csv(self.csvpath_train)
+        # self.csv['val'] = pd.read_csv(self.csvpath_val)
+        # self.csv['test'] = pd.read_csv(self.csvpath_test)
+        # if cfg.mode == 't2':
+        #     keep_t2 = pd.read_csv(cfg.path.IXI.keep_t2)  # only keep t2 images that have a t1 counterpart
 
-        for state in states:
-            self.csv[state]['settype'] = state
-            self.csv[state]['setname'] = 'IXI'
+        # for state in states:
+        #     self.csv[state]['settype'] = state
+        #     self.csv[state]['setname'] = 'IXI'
 
-            self.csv[state]['img_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['img_path']
-            self.csv[state]['mask_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['mask_path']
-            self.csv[state]['seg_path'] = None
+        #     self.csv[state]['img_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['img_path']
+        #     self.csv[state]['mask_path'] = cfg.path.pathBase + '/Data/' + self.csv[state]['mask_path']
+        #     self.csv[state]['seg_path'] = None
 
-            if cfg.mode == 't2':
-                self.csv[state] = self.csv[state][self.csv[state].img_name.isin(keep_t2['0'].str.replace('t2', 't1'))]
-                self.csv[state]['img_path'] = self.csv[state]['img_path'].str.replace('t1', 't2')
+        #     if cfg.mode == 't2':
+        #         self.csv[state] = self.csv[state][self.csv[state].img_name.isin(keep_t2['0'].str.replace('t2', 't1'))]
+        #         self.csv[state]['img_path'] = self.csv[state]['img_path'].str.replace('t1', 't2')
 
     def setup(self, stage: Optional[str] = None):
 
         def get_vol2slice_dataset(subjects):
             ds = tio.SubjectsDataset(subjects)
-            return create_dataset.vol2slice(ds, cfg)
+            return create_dataset.vol2slice(ds, self.cfg)
 
         # called on every GPU
         if not hasattr(self, 'train'):
-            mriprocessor = create_dataset.MRIProcessor(self.cfg.IXI.path)
+            mriprocessor = create_dataset.MRIProcessor(self.cfg.path.IXI.path, self.cfg.image_new_size)
             subjects = mriprocessor.load_images()
             train, val, test = mriprocessor.split_data(subjects)
             if self.cfg.sample_set:  # for debugging

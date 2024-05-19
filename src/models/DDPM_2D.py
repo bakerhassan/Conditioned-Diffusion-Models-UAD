@@ -4,7 +4,7 @@ from src.models.modules.DDPM_encoder import get_encoder
 import torch
 from src.utils.utils_eval import _test_step, _test_end, get_eval_dictionary
 import numpy as np
-from pytorch_lightning.core.lightning import LightningModule
+from pytorch_lightning import LightningModule
 import torch.optim as optim
 from typing import Any
 import torchio as tio
@@ -31,7 +31,7 @@ class DDPM_2D(LightningModule):
 
 
         model = OpenAI_UNet(
-                            image_size =  (int(cfg.imageDim[0] / cfg.rescaleFactor),int(cfg.imageDim[1] / cfg.rescaleFactor)),
+                            image_size = cfg.image_new_size,
                             in_channels = 1,
                             model_channels = cfg.get('unet_dim',64),
                             out_channels = 1,
@@ -61,7 +61,7 @@ class DDPM_2D(LightningModule):
 
         self.diffusion = GaussianDiffusion(
         model,
-        image_size = (int(cfg.imageDim[0] / cfg.rescaleFactor),int(cfg.imageDim[1] / cfg.rescaleFactor)), # only important when sampling
+        image_size = cfg.image_new_size[:-1], # only important when sampling
         timesteps = timesteps,   # number of steps
         sampling_timesteps = sampling_timesteps,
         objective = cfg.get('objective','pred_x0'), # pred_noise or pred_x0
@@ -153,6 +153,7 @@ class DDPM_2D(LightningModule):
         data_orig = batch['vol_orig'][tio.DATA]
         data_seg = batch['seg_orig'][tio.DATA] if batch['seg_available'] else torch.zeros_like(data_orig)
         data_mask = batch['mask_orig'][tio.DATA]
+        original_shape = batch['original_shape']
         ID = batch['ID']
         age = batch['age']
         self.stage = batch['stage']
@@ -242,7 +243,7 @@ class DDPM_2D(LightningModule):
         final_volume = final_volume.unsqueeze(0)
         # calculate metrics
 
-        _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label) # everything that is independent of the model choice
+        _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label, original_shape) # everything that is independent of the model choice
 
            
     def on_test_end(self) :

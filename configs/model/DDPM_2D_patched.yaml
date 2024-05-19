@@ -8,6 +8,7 @@ cfg:
   interRes: ${datamodule.cfg.interRes}
   cropMode: ${datamodule.cfg.cropMode}
   spatialDims: 2D
+  image_new_size: ${datamodule.cfg.image_new_size}
   resizedEvaluation: ${datamodule.cfg.resizedEvaluation}
 
   ## Architecture

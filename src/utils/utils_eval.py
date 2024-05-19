@@ -15,11 +15,14 @@ from PIL import Image
 
 import matplotlib.colors as colors
 
-def _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label_vol) :
+def _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID, label_vol, original_shape) :
         self.healthy_sets = ['IXI']
         # Resize the images if desired
         if not self.cfg.resizedEvaluation: # in case of full resolution evaluation 
-            final_volume = F.interpolate(final_volume, size=self.new_size, mode="trilinear",align_corners=True).squeeze() # resize
+            final_volume = F.interpolate(final_volume, size=original_shape, mode="trilinear",align_corners=True).squeeze() # resize
+            data_orig = F.interpolate(data_orig, size=original_shape, mode="trilinear",align_corners=True).squeeze()
+            data_seg = data_seg.squeeze()
+            data_mask = F.interpolate(data_mask, size=original_shape, mode="trilinear",align_corners=True).squeeze()
         else: 
             final_volume = final_volume.squeeze()
         
@@ -125,8 +128,8 @@ def _test_step(self, final_volume, data_orig, data_seg, data_mask, batch_idx, ID
             # other metrics from monai:
             if len(data_seg.shape) == 4:
                 data_seg = data_seg.unsqueeze(0)
-            Haus = monai.metrics.compute_hausdorff_distance(diffs_thresholded.unsqueeze(0).unsqueeze(0),data_seg, include_background=False, distance_metric='euclidean', percentile=None, directed=False)
-            self.eval_dict['HausPerVol'].append(Haus.item())
+            # Haus = monai.metrics.compute_hausdorff_distance(diffs_thresholded.unsqueeze(0),data_seg.unsqueeze(0), include_background=False, distance_metric='euclidean', percentile=None, directed=False)
+            # self.eval_dict['HausPerVol'].append(Haus.item())
 
             # compute slice-wise metrics
             for slice in range(data_seg.squeeze().shape[0]): 
@@ -610,7 +613,7 @@ def log_images(self, diff_volume, data_orig, data_seg, data_mask, final_volume, 
         
         if self.cfg.get('save_to_disc',True):
             plt.savefig(os.path.join(ImagePathList['imagesGrid'], '{}_{}_Grid.png'.format(ID[0],j)),bbox_inches='tight')
-        self.logger.experiment[0].log({'images/{}/{}_Grid.png'.format(self.dataset[0],j) : wandb.Image(plt)})
+        self.logger.experiment.log({'images/{}/{}_Grid.png'.format(self.dataset[0],j) : wandb.Image(plt)})
         plt.clf()
         plt.cla()
         plt.close()

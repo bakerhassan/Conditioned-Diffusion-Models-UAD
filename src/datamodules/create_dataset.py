@@ -1,14 +1,63 @@
 from torch.utils.data import Dataset
 import numpy as np
 import torch
+import os
 import SimpleITK as sitk
 import torchio as tio
-
+import pickle
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 from multiprocessing import Manager
 
 # this controls the split.
 RANDOM_SEED = 1
+
+
+class ResizeIntensity(tio.Transform):
+    def __init__(self, target_shape, **kwargs):
+        super().__init__(**kwargs)
+        self.target_shape = target_shape
+
+    def apply_transform(self, subject):
+        # Iterate through each image in the subject
+        for image_name, image in subject.get_images_dict(intensity_only=False).items():
+            if image.type == tio.INTENSITY:
+                # Save the original shape
+                original_shape = image.spatial_shape
+                subject['original_shape'] = original_shape
+
+                # Resize the image to the target shape
+                resize_transform = tio.Resize(self.target_shape)
+                image.set_data(resize_transform(image.data))
+
+            else:
+                # For LabelMap, do not resize
+                pass
+
+        return subject
+
+class UndoResizeIntensity(tio.Transform):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def apply_transform(self, subject):
+        # Iterate through each image in the subject
+        for image_name, image in subject.get_images_dict(intensity_only=False).items():
+            if image.type == tio.INTENSITY:
+                # Check if the original shape is stored in the metadata
+                if 'original_shape' in image:
+                    original_shape = image['original_shape']
+
+                    # Resize the image back to the original shape
+                    resize_transform =tio.Resize(original_shape)
+                    image.set_data(resize_transform(image.data))
+
+                else:
+                    raise ValueError(f"Original shape not found for image {image_name}")
+
+            else:
+                # For LabelMap, do not resize
+                pass
+
 
 class CropToBrain(tio.Transform):
     def apply_transform(self, subject):
@@ -35,7 +84,7 @@ class CropToBrain(tio.Transform):
                                             min_indices[2]:max_indices[2]+1,
                                             min_indices[3]:max_indices[3]+1]
             if isinstance(image, tio.ScalarImage):
-                cropped_image = tio.ScalarImage(cropped_data)
+                cropped_image = tio.ScalarImage(tensor=cropped_data)
             elif isinstance(image, tio.LabelMap):
                 cropped_image = tio.LabelMap(tensor=cropped_data)
             else:
@@ -45,8 +94,9 @@ class CropToBrain(tio.Transform):
         return subject
 
 class MRIProcessor:
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, image_new_size):
         self.root_dir = root_dir
+        self.image_new_size = image_new_size
     def load_images(self):
         subjects = []
         transforms = tio.Compose([
@@ -54,14 +104,13 @@ class MRIProcessor:
             tio.RescaleIntensity(percentiles=(0.05, 99.5)),
             tio.ToCanonical(),  # Convert to canonical orientation: RAS
             CropToBrain(),
-            tio.Resize((512, 512, -1))
+            ResizeIntensity(self.image_new_size)
         ])
         for subdir, _, files in os.walk(self.root_dir):
             if len(files) == 0:
                 continue
             for filename in files:
-
-                if filename.endswith('.nii') or filename.endswith('.nii.gz'):
+                if filename.endswith('.nii') or filename.endswith('.nii.gz') and not ('seg' in filename):
                     image_path = os.path.join(subdir, filename)
                     source_label = os.path.basename(subdir)
                     subject_dict = {
@@ -70,7 +119,8 @@ class MRIProcessor:
                         'id': filename
                     }
 
-                    label_file_path = os.path.join(subdir, filename.split('t1')[0] + 'seg.nii.gz')
+                    name = filename.split('t1')[0] if len(filename.split('t1')) > 1 else filename.split('T1')[0] 
+                    label_file_path = os.path.join(subdir , name + 'seg.nii.gz')
                     if os.path.exists(label_file_path):
                         subject_dict['seg'] = tio.LabelMap(label_file_path)
                     subject = tio.Subject(**subject_dict)
@@ -85,7 +135,7 @@ class MRIProcessor:
         generator = torch.Generator().manual_seed(RANDOM_SEED)
         total_samples = len(subjects)
         random_indexes = torch.randperm(total_samples, generator=generator)
-        subjects = subjects[random_indexes]
+        subjects = list(map(subjects.__getitem__, random_indexes))
         train_samples = int(total_samples * train_ratio)
         val_samples = int(total_samples * val_ratio)
         reminders = total_samples - train_samples - val_samples
@@ -122,12 +172,13 @@ class MRIProcessor:
         for subject in subjects:
             if 'seg' in subject:
                 subject['vol_orig'] = subject['vol']
-                subject['seg_orig'] = subject['orig']
+                subject['seg_orig'] = subject['seg']
                 subject['age'] = 60
                 subject['ID'] = subject['id']
                 subject['label'] = torch.tensor([0])
                 subject['stage'] = 'val'
                 subject['seg_available'] = False
+                subject['mask_orig'] = subject['vol_orig']
 
         return subjects
 
@@ -294,7 +345,7 @@ class vol2slice(Dataset):
         subject['ind'] = self.ind
 
         subject['vol'].data = subject['vol'].data[..., self.ind]
-        subject['mask'].data = subject['mask'].data[..., self.ind]
+        # subject['mask'].data = subject['mask'].data[..., self.ind]
 
         return subject
 

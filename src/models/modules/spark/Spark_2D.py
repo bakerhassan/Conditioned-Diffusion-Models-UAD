@@ -34,7 +34,7 @@ class SparK_2D(nn.Module):
         pyramid=cfg.get('pyramid',4)  # 1 for single-scale pre-training; 4 for full-scale pre-training
         self.cfg = cfg
         sparse_encoder = build_sparse_encoder(cfg.backbone, 
-                                                input_size=int(cfg.imageDim[1]/cfg.rescaleFactor), 
+                                                input_size=cfg.image_new_size[:-1], 
                                                 sbn=sbn, 
                                                 drop_path_rate=cfg.get('dp',0), 
                                                 verbose=False)
