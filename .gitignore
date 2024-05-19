@@ -17,3 +17,7 @@ wandb/
 outputlog*
 errorlog*
 .idea
+*.log
+*pyc
+.checkpoints/*
+__pycache__/
